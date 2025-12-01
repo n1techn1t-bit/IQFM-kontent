@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { X, Send, User as UserIcon, Calendar, Upload, Check, AlertCircle } from 'lucide-react';
+import { X, Send, User as UserIcon, Calendar, Upload, Check, AlertCircle, Edit2, Trash2 } from 'lucide-react';
 import { Post, PostStatus, User, UserRole, Comment } from '../types';
 import { dbService } from '../services/db';
 
@@ -17,25 +18,25 @@ const PostModal: React.FC<PostModalProps> = ({ isOpen, onClose, post, currentUse
   const [scheduledDate, setScheduledDate] = useState('');
   const [newComment, setNewComment] = useState('');
   const [status, setStatus] = useState<PostStatus>(PostStatus.DRAFT);
-  const [comments, setComments] = useState<Comment[]>([]);
+  
+  // Edit Comment State
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
 
   useEffect(() => {
     if (post) {
       setCaption(post.caption);
       setMediaUrl(post.mediaUrl);
       setStatus(post.status);
-      setComments(post.comments || []);
       if (post.scheduledDate) {
         setScheduledDate(new Date(post.scheduledDate).toISOString().slice(0, 16));
       } else {
         setScheduledDate('');
       }
     } else {
-      // Defaults for new post
       setCaption('');
-      setMediaUrl(`https://picsum.photos/600/600?random=${Date.now()}`); // Mock upload
+      setMediaUrl(`https://picsum.photos/600/600?random=${Date.now()}`);
       setStatus(PostStatus.DRAFT);
-      setComments([]);
       setScheduledDate('');
     }
   }, [post, isOpen]);
@@ -75,13 +76,35 @@ const PostModal: React.FC<PostModalProps> = ({ isOpen, onClose, post, currentUse
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !post) return;
-    
-    const addedComment = await dbService.addComment(post.id, newComment, currentUser);
-    setComments(prev => [...prev, addedComment]);
+    await dbService.addComment(post.id, newComment, currentUser);
     setNewComment('');
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (window.confirm('Usunąć komentarz?') && post) {
+      await dbService.deletePostComment(post.id, commentId);
+    }
+  };
+
+  const startEditingComment = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditingText(comment.text);
+  };
+
+  const saveEditedComment = async (commentId: string) => {
+    if (!editingText.trim() || !post) return;
+    await dbService.updatePostComment(post.id, commentId, editingText);
+    setEditingCommentId(null);
+  };
+
+  const cancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingText('');
+  };
+
   const canEdit = currentUser.role === UserRole.ADMIN || (currentUser.role === UserRole.CLIENT && status !== PostStatus.PUBLISHED);
+  
+  const currentComments = post?.comments || [];
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -168,20 +191,60 @@ const PostModal: React.FC<PostModalProps> = ({ isOpen, onClose, post, currentUse
            </div>
 
            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50">
-             {comments.length === 0 ? (
+             {currentComments.length === 0 ? (
                <div className="text-center text-gray-400 mt-20">
                  <p>Brak komentarzy.</p>
                  <p className="text-xs">Rozpocznij dyskusję o tym poście.</p>
                </div>
              ) : (
-               comments.map(comment => (
-                 <div key={comment.id} className={`flex gap-3 ${comment.userId === currentUser.id ? 'flex-row-reverse' : ''}`}>
+               currentComments.map(comment => (
+                 <div key={comment.id} className={`flex gap-3 ${comment.userId === currentUser.id ? 'flex-row-reverse' : ''} group`}>
                     <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs border border-indigo-200 flex-shrink-0">
                       {comment.userName.charAt(0)}
                     </div>
-                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${comment.userId === currentUser.id ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-700 rounded-tl-none'}`}>
-                      <p className="font-semibold text-[10px] opacity-70 mb-1">{comment.userName}</p>
-                      {comment.text}
+                    
+                    <div className={`max-w-[80%] flex flex-col ${comment.userId === currentUser.id ? 'items-end' : 'items-start'}`}>
+                       {editingCommentId === comment.id ? (
+                        <div className="flex flex-col gap-2 w-full min-w-[200px] animate-in fade-in zoom-in-95">
+                           <textarea
+                             value={editingText}
+                             onChange={(e) => setEditingText(e.target.value)}
+                             className="w-full p-2 text-sm border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                             rows={2}
+                           />
+                           <div className="flex gap-2 justify-end">
+                             <button onClick={cancelEditComment} className="p-1 text-gray-500 hover:text-gray-700"><X size={14}/></button>
+                             <button onClick={() => saveEditedComment(comment.id)} className="p-1 bg-indigo-600 text-white rounded hover:bg-indigo-700"><Check size={14}/></button>
+                           </div>
+                        </div>
+                      ) : (
+                        <div className={`p-3 rounded-2xl text-sm relative group/bubble
+                          ${comment.userId === currentUser.id 
+                            ? 'bg-indigo-600 text-white rounded-tr-none' 
+                            : 'bg-white border border-gray-200 text-gray-700 rounded-tl-none'}
+                        `}>
+                          <p className="font-semibold text-[10px] opacity-70 mb-1">{comment.userName}</p>
+                          {comment.text}
+                          
+                          {/* Actions Overlay */}
+                          {comment.userId === currentUser.id && (
+                             <div className="absolute -bottom-6 right-0 hidden group-hover/bubble:flex items-center gap-1 bg-white shadow-sm border border-gray-100 rounded-full px-2 py-1 z-10">
+                                <button 
+                                  onClick={() => startEditingComment(comment)}
+                                  className="p-1 text-gray-400 hover:text-indigo-600 transition"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                  className="p-1 text-gray-400 hover:text-red-500 transition"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                             </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                  </div>
                ))

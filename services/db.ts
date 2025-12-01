@@ -5,6 +5,7 @@ import {
   addDoc, 
   updateDoc, 
   doc, 
+  getDoc,
   deleteDoc, 
   query, 
   orderBy,
@@ -125,6 +126,28 @@ export const dbService = {
     return newComment;
   },
 
+  deleteIdeaComment: async (ideaId: string, commentId: string) => {
+    const ref = doc(db, "ideas", ideaId);
+    const snapshot = await getDoc(ref);
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      const updatedComments = (data.comments || []).filter((c: Comment) => c.id !== commentId);
+      await updateDoc(ref, { comments: updatedComments });
+    }
+  },
+
+  updateIdeaComment: async (ideaId: string, commentId: string, newText: string) => {
+    const ref = doc(db, "ideas", ideaId);
+    const snapshot = await getDoc(ref);
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      const updatedComments = (data.comments || []).map((c: Comment) => 
+        c.id === commentId ? { ...c, text: newText } : c
+      );
+      await updateDoc(ref, { comments: updatedComments });
+    }
+  },
+
   // --- POSTS (Repository items) ---
 
   // Real-time listener for Posts
@@ -184,6 +207,28 @@ export const dbService = {
       comments: arrayUnion(newComment)
     });
     return newComment;
+  },
+
+  deletePostComment: async (postId: string, commentId: string) => {
+    const ref = doc(db, "posts", postId);
+    const snapshot = await getDoc(ref);
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      const updatedComments = (data.comments || []).filter((c: Comment) => c.id !== commentId);
+      await updateDoc(ref, { comments: updatedComments });
+    }
+  },
+
+  updatePostComment: async (postId: string, commentId: string, newText: string) => {
+    const ref = doc(db, "posts", postId);
+    const snapshot = await getDoc(ref);
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      const updatedComments = (data.comments || []).map((c: Comment) => 
+        c.id === commentId ? { ...c, text: newText } : c
+      );
+      await updateDoc(ref, { comments: updatedComments });
+    }
   },
 
   deletePost: async (postId: string) => {
