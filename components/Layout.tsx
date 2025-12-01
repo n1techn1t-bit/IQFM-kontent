@@ -30,7 +30,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentUser, setCurrentPage, 
     { id: 'kanban_posts', label: 'Posty', icon: FileText }, // New Kanban board
     // { id: 'repository', label: 'Repozytorium', icon: Library }, // Hidden
     { id: 'calendar', label: 'Kalendarz', icon: Calendar },
-    { id: 'analytics', label: 'Statystyki', icon: BarChart2 },
+    // { id: 'analytics', label: 'Statystyki', icon: BarChart2 }, // Hidden
   ];
 
   return (

@@ -1,20 +1,24 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, addMonths, subMonths } from 'date-fns';
 import { pl } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
-import { Post, PostStatus } from '../types';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Idea, IdeaVariant, IdeaStatus, Post } from '../types';
 import { dbService } from '../services/db';
 
 interface CalendarViewProps {
-  onEditPost: (post: Post) => void;
+  onEditPost: (post: Post) => void; // Keeping prop type for compatibility, though we might not use it directly for Ideas yet
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({ onEditPost }) => {
+const CalendarView: React.FC<CalendarViewProps> = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<Idea[]>([]);
 
   useEffect(() => {
-    const unsubscribe = dbService.subscribeToPosts(setPosts);
+    // Subscribe to Ideas with POST variant instead of old Repository Posts
+    const unsubscribe = dbService.subscribeToIdeas(IdeaVariant.POST, (fetchedIdeas) => {
+        setPosts(fetchedIdeas);
+    });
     return () => unsubscribe();
   }, []);
 
@@ -33,10 +37,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEditPost }) => {
     );
   };
 
-  const getStatusDot = (status: PostStatus) => {
+  const getStatusDot = (status: IdeaStatus) => {
     switch(status) {
-        case PostStatus.PUBLISHED: return 'bg-blue-500';
-        case PostStatus.APPROVED: return 'bg-green-500';
+        case IdeaStatus.TODO: return 'bg-blue-500';
+        case IdeaStatus.CHANGES_REQUIRED: return 'bg-orange-500';
+        case IdeaStatus.BACKLOG: return 'bg-gray-300';
+        case IdeaStatus.REJECTED: return 'bg-red-500';
         default: return 'bg-gray-400';
     }
   };
@@ -88,20 +94,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onEditPost }) => {
               
               <div className="flex-1 space-y-1 overflow-y-auto">
                 {dayPosts.map(post => (
-                  <button 
+                  <div 
                     key={post.id}
-                    onClick={() => onEditPost(post)}
-                    className="w-full text-left bg-white border border-gray-200 shadow-sm rounded p-1.5 hover:border-indigo-300 transition group"
+                    className="w-full text-left bg-white border border-gray-200 shadow-sm rounded p-1.5 hover:border-indigo-300 transition group cursor-default"
                   >
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className={`w-1.5 h-1.5 rounded-full ${getStatusDot(post.status)}`}></div>
                       <span className="text-[10px] text-gray-500 truncate">{format(new Date(post.scheduledDate!), 'HH:mm')}</span>
                     </div>
                     <div className="flex gap-2 items-center">
-                        <img src={post.mediaUrl} className="w-6 h-6 rounded object-cover" alt="" />
-                        <p className="text-xs text-gray-700 truncate font-medium">{post.caption}</p>
+                        <p className="text-xs text-gray-700 truncate font-medium">{post.title}</p>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>

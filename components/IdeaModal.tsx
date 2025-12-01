@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Send, Lightbulb, AlertTriangle, Trash2, Edit2, Check } from 'lucide-react';
-import { Idea, IdeaStatus, User, UserRole, Comment } from '../types';
+import { X, Send, Lightbulb, AlertTriangle, Trash2, Edit2, Check, Calendar, FileText } from 'lucide-react';
+import { Idea, IdeaStatus, User, UserRole, Comment, IdeaVariant } from '../types';
 import { dbService } from '../services/db';
 
 interface IdeaModalProps {
@@ -17,6 +17,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
   const [description, setDescription] = useState('');
   const [newComment, setNewComment] = useState('');
   const [status, setStatus] = useState<IdeaStatus>(IdeaStatus.BACKLOG);
+  const [scheduledDate, setScheduledDate] = useState('');
 
   // Edit Comment State
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -27,16 +28,24 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
       setTitle(idea.title);
       setDescription(idea.description);
       setStatus(idea.status);
+      if (idea.scheduledDate) {
+        setScheduledDate(new Date(idea.scheduledDate).toISOString().slice(0, 16));
+      } else {
+        setScheduledDate('');
+      }
     }
   }, [idea, isOpen]);
 
   if (!isOpen || !idea) return null;
 
   const handleSave = () => {
+    const timestamp = scheduledDate ? new Date(scheduledDate).getTime() : undefined;
+
     dbService.updateIdea(idea.id, {
       title,
       description,
-      status
+      status,
+      scheduledDate: timestamp
     });
     refreshData();
     onClose();
@@ -95,6 +104,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
   };
 
   const currentComments = idea.comments || [];
+  const isPost = idea.variant === IdeaVariant.POST;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -104,29 +114,33 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
         <div className="w-1/2 bg-gray-50 p-8 flex flex-col border-r border-gray-200 overflow-y-auto">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <Lightbulb className="text-yellow-500" />
-              Szczegóły Pomysłu
+              {isPost ? <FileText className="text-indigo-500" /> : <Lightbulb className="text-yellow-500" />}
+              Szczegóły {isPost ? 'Posta' : 'Tematu'}
             </h3>
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-white border border-gray-200 text-gray-600">
                 {getStatusLabel(status)}
             </span>
           </div>
 
-          <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-6 flex items-start gap-3">
-            <div className="bg-indigo-100 p-2 rounded-full text-indigo-600 mt-0.5">
+          <div className={`border rounded-lg p-4 mb-6 flex items-start gap-3 ${isPost ? 'bg-blue-50 border-blue-100' : 'bg-indigo-50 border-indigo-100'}`}>
+            <div className={`p-2 rounded-full mt-0.5 ${isPost ? 'bg-blue-100 text-blue-600' : 'bg-indigo-100 text-indigo-600'}`}>
                 <AlertTriangle size={18} />
             </div>
             <div>
-                <h4 className="text-sm font-bold text-indigo-900">Inspiracja / Kierunek</h4>
-                <p className="text-xs text-indigo-700 mt-1">
-                    To jest tylko koncepcja, a nie gotowa treść posta. Użyj tego miejsca do brainstormingu i ustalenia kierunku wizualnego przed rozpoczęciem produkcji.
+                <h4 className={`text-sm font-bold ${isPost ? 'text-blue-900' : 'text-indigo-900'}`}>
+                  {isPost ? 'Planowanie Publikacji' : 'Inspiracja / Kierunek'}
+                </h4>
+                <p className={`text-xs mt-1 ${isPost ? 'text-blue-700' : 'text-indigo-700'}`}>
+                    {isPost 
+                      ? 'Tutaj ustalasz datę publikacji posta. Po jej wybraniu post pojawi się w kalendarzu.' 
+                      : 'To jest tylko koncepcja, a nie gotowa treść posta. Użyj tego miejsca do brainstormingu.'}
                 </p>
             </div>
           </div>
 
           <div className="space-y-6 flex-1">
              <div>
-               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Tytuł Pomysłu</label>
+               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Tytuł</label>
                <input 
                   type="text"
                   value={title}
@@ -135,13 +149,28 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
                />
              </div>
              
+             {isPost && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Data Publikacji</label>
+                  <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                      <input 
+                        type="datetime-local"
+                        value={scheduledDate}
+                        onChange={e => setScheduledDate(e.target.value)}
+                        className="w-full pl-10 p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                  </div>
+                </div>
+             )}
+
              <div className="flex-1 flex flex-col">
-               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Opis koncepcji / Notatki</label>
+               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Opis / Treść</label>
                <textarea 
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   className="w-full flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-h-[200px] text-sm leading-relaxed resize-none"
-                  placeholder="Opisz na czym polega pomysł, jakie emocje ma wywoływać, jakie zdjęcia wykonać..."
+                  placeholder={isPost ? "Wpisz treść posta (caption)..." : "Opisz koncepcję..."}
                />
              </div>
           </div>
@@ -164,7 +193,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
         <div className="w-1/2 flex flex-col bg-white">
            <div className="flex justify-between items-center p-6 border-b border-gray-100">
              <h4 className="font-bold text-gray-800 flex items-center gap-2">
-               <span className="w-2 h-2 rounded-full bg-yellow-400"></span> Dyskusja o koncepcji
+               <span className="w-2 h-2 rounded-full bg-yellow-400"></span> Dyskusja
              </h4>
              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                <X size={24} />
@@ -176,7 +205,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
                <div className="text-center text-gray-400 mt-20">
                  <Lightbulb size={48} className="mx-auto mb-4 opacity-20" />
                  <p>Brak komentarzy.</p>
-                 <p className="text-xs">Rozpocznij dyskusję o tym pomyśle.</p>
+                 <p className="text-xs">Rozpocznij dyskusję.</p>
                </div>
              ) : (
                currentComments.map(comment => (
@@ -239,7 +268,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
                   type="text" 
                   value={newComment}
                   onChange={e => setNewComment(e.target.value)}
-                  placeholder="Dodaj uwagę do pomysłu..."
+                  placeholder="Dodaj uwagę..."
                   className="flex-1 bg-gray-100 border-0 rounded-full px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
                 />
                 <button type="submit" className="w-12 h-12 bg-indigo-600 rounded-full text-white flex items-center justify-center hover:bg-indigo-700 transition shadow-md">

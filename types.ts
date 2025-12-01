@@ -37,6 +37,7 @@ export interface Idea {
   comments: Comment[];
   variant: IdeaVariant;
   order?: number; // For manual sorting
+  scheduledDate?: number; // Timestamp for Calendar (only for POST variant)
 }
 
 export interface Post {
