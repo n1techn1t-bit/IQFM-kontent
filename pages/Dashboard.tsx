@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Post, Idea, IdeaStatus, PostStatus } from '../types';
+import { Post, Idea, IdeaStatus, PostStatus, IdeaVariant } from '../types';
 import { dbService } from '../services/db';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -9,7 +9,7 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const unsubPosts = dbService.subscribeToPosts(setPosts);
-    const unsubIdeas = dbService.subscribeToIdeas(setIdeas);
+    const unsubIdeas = dbService.subscribeToIdeas(IdeaVariant.TOPIC, setIdeas);
     return () => {
       unsubPosts();
       unsubIdeas();

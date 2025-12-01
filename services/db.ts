@@ -1,3 +1,4 @@
+
 import { 
   collection, 
   onSnapshot, 
@@ -8,12 +9,15 @@ import {
   query, 
   orderBy,
   arrayUnion,
+  where,
+  getDocs,
   Timestamp
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { 
   Idea, 
   IdeaStatus, 
+  IdeaVariant,
   Post, 
   PostStatus, 
   Comment, 
@@ -37,11 +41,43 @@ const convertTimestamps = (data: any) => {
 };
 
 export const dbService = {
-  // --- IDEAS ---
+  // --- EXPORT ---
+  exportDatabase: async () => {
+    try {
+      const ideasSnapshot = await getDocs(collection(db, "ideas"));
+      const postsSnapshot = await getDocs(collection(db, "posts"));
 
-  // Real-time listener for Ideas
-  subscribeToIdeas: (callback: (ideas: Idea[]) => void) => {
-    const q = query(collection(db, "ideas"), orderBy("createdAt", "desc"));
+      const data = {
+        ideas: ideasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        posts: postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        exportDate: new Date().toISOString()
+      };
+
+      const jsonString = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `iqfm_export_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Błąd podczas eksportu bazy danych. Sprawdź konsolę.");
+    }
+  },
+
+  // --- IDEAS / TOPICS / KANBAN POSTS ---
+
+  // Real-time listener for Ideas with variant filtering
+  subscribeToIdeas: (variant: IdeaVariant, callback: (ideas: Idea[]) => void) => {
+    // REMOVED orderBy("createdAt", "desc") to allow client-side manual sorting via 'order' field
+    // and to prevent Firestore Index errors.
+    const q = query(
+      collection(db, "ideas"), 
+      where("variant", "==", variant)
+    );
+    
     return onSnapshot(q, (snapshot) => {
       const ideas = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -65,8 +101,13 @@ export const dbService = {
     await addDoc(collection(db, "ideas"), {
       ...idea,
       createdAt: Timestamp.now(),
-      comments: []
+      comments: [],
+      order: Date.now() // Initialize order with timestamp to put it at the end by default
     });
+  },
+
+  deleteIdea: async (id: string) => {
+    await deleteDoc(doc(db, "ideas", id));
   },
 
   addIdeaComment: async (ideaId: string, text: string, user: User) => {
@@ -76,7 +117,7 @@ export const dbService = {
       userId: user.id,
       userName: user.name,
       text,
-      createdAt: Date.now() // We keep number for sub-objects usually, or map it. Firestore saves numbers fine in maps.
+      createdAt: Date.now() 
     };
     await updateDoc(ref, {
       comments: arrayUnion(newComment)
@@ -84,7 +125,7 @@ export const dbService = {
     return newComment;
   },
 
-  // --- POSTS ---
+  // --- POSTS (Repository items) ---
 
   // Real-time listener for Posts
   subscribeToPosts: (callback: (posts: Post[]) => void) => {
@@ -127,11 +168,6 @@ export const dbService = {
       dataToUpdate.scheduledDate = Timestamp.fromMillis(updates.scheduledDate);
     }
     
-    // Logic for version incrementing would ideally require a transaction or reading current doc first,
-    // for simplicity we just update here. In a real app we might read before write.
-    // For this demo, we skip manual version increment or we could do it if we read the doc first.
-    // We will just update the timestamp.
-
     await updateDoc(ref, dataToUpdate);
   },
 

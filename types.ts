@@ -1,8 +1,14 @@
+
 export enum IdeaStatus {
   BACKLOG = 'BACKLOG',
   TODO = 'TODO',
   CHANGES_REQUIRED = 'CHANGES_REQUIRED',
   REJECTED = 'REJECTED'
+}
+
+export enum IdeaVariant {
+  TOPIC = 'TOPIC',
+  POST = 'POST'
 }
 
 export enum PostStatus {
@@ -29,6 +35,8 @@ export interface Idea {
   tags: string[];
   createdAt: number;
   comments: Comment[];
+  variant: IdeaVariant;
+  order?: number; // For manual sorting
 }
 
 export interface Post {

@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { X, Send, Lightbulb, AlertTriangle } from 'lucide-react';
+import { X, Send, Lightbulb, AlertTriangle, Trash2 } from 'lucide-react';
 import { Idea, IdeaStatus, User, UserRole, Comment } from '../types';
 import { dbService } from '../services/db';
 
@@ -37,6 +38,18 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
     });
     refreshData();
     onClose();
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm('Czy na pewno chcesz usunąć tę kartę? Tej operacji nie można cofnąć.')) {
+      try {
+        await dbService.deleteIdea(idea.id);
+        onClose();
+      } catch (error) {
+        console.error("Error deleting idea:", error);
+        alert("Wystąpił błąd podczas usuwania.");
+      }
+    }
   };
 
   const handleAddComment = async (e: React.FormEvent) => {
@@ -108,8 +121,15 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
              </div>
           </div>
           
-          <div className="pt-8">
-             <button onClick={handleSave} className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition">
+          <div className="pt-8 flex gap-3">
+             <button 
+               onClick={handleDelete}
+               className="p-3 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition"
+               title="Usuń kartę"
+             >
+               <Trash2 size={20} />
+             </button>
+             <button onClick={handleSave} className="flex-1 bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition">
                Zapisz Zmiany
              </button>
           </div>
