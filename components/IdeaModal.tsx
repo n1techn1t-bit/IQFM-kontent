@@ -132,8 +132,8 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
                 </h4>
                 <p className={`text-xs mt-1 ${isPost ? 'text-blue-700' : 'text-indigo-700'}`}>
                     {isPost 
-                      ? 'Tutaj ustalasz datę publikacji posta. Po jej wybraniu post pojawi się w kalendarzu.' 
-                      : 'To jest tylko koncepcja, a nie gotowa treść posta. Użyj tego miejsca do brainstormingu.'}
+                      ? 'Treści stanowią punkt wyjścia (koncepcja). Szczegóły są do ustalenia w sekcji dyskusja.' 
+                      : 'Treści stanowią punkt wyjścia (koncepcja). Szczegóły są do ustalenia w sekcji dyskusja.'}
                 </p>
             </div>
           </div>
