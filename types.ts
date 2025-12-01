@@ -11,6 +11,12 @@ export enum IdeaVariant {
   POST = 'POST'
 }
 
+export enum PostCategory {
+  REELS = 'REELS',
+  POST = 'POST',
+  STORY = 'STORY'
+}
+
 export enum PostStatus {
   DRAFT = 'DRAFT',
   PENDING_APPROVAL = 'PENDING_APPROVAL',
@@ -38,6 +44,7 @@ export interface Idea {
   variant: IdeaVariant;
   order?: number; // For manual sorting
   scheduledDate?: number; // Timestamp for Calendar (only for POST variant)
+  category?: PostCategory; // New field for Post categorization
 }
 
 export interface Post {

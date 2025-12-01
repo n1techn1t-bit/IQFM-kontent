@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Send, Lightbulb, AlertTriangle, Trash2, Edit2, Check, Calendar, FileText } from 'lucide-react';
-import { Idea, IdeaStatus, User, UserRole, Comment, IdeaVariant } from '../types';
+import { X, Send, Lightbulb, AlertTriangle, Trash2, Edit2, Check, Calendar, FileText, Smartphone, Camera, Video } from 'lucide-react';
+import { Idea, IdeaStatus, User, UserRole, Comment, IdeaVariant, PostCategory } from '../types';
 import { dbService } from '../services/db';
 
 interface IdeaModalProps {
@@ -18,6 +18,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
   const [newComment, setNewComment] = useState('');
   const [status, setStatus] = useState<IdeaStatus>(IdeaStatus.BACKLOG);
   const [scheduledDate, setScheduledDate] = useState('');
+  const [category, setCategory] = useState<PostCategory | undefined>(undefined);
 
   // Edit Comment State
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -28,6 +29,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
       setTitle(idea.title);
       setDescription(idea.description);
       setStatus(idea.status);
+      setCategory(idea.category);
       if (idea.scheduledDate) {
         setScheduledDate(new Date(idea.scheduledDate).toISOString().slice(0, 16));
       } else {
@@ -39,13 +41,15 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
   if (!isOpen || !idea) return null;
 
   const handleSave = () => {
-    const timestamp = scheduledDate ? new Date(scheduledDate).getTime() : undefined;
+    // Firestore does not accept 'undefined', we must use 'null'
+    const timestamp = scheduledDate ? new Date(scheduledDate).getTime() : null;
 
     dbService.updateIdea(idea.id, {
       title,
       description,
       status,
-      scheduledDate: timestamp
+      scheduledDate: timestamp,
+      category: category || null
     });
     refreshData();
     onClose();
@@ -150,18 +154,44 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
              </div>
              
              {isPost && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Data Publikacji</label>
-                  <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                      <input 
-                        type="datetime-local"
-                        value={scheduledDate}
-                        onChange={e => setScheduledDate(e.target.value)}
-                        className="w-full pl-10 p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Rodzaj Posta</label>
+                    <div className="flex gap-3">
+                      {[
+                        { id: PostCategory.REELS, label: 'Reels', icon: Video, color: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
+                        { id: PostCategory.POST, label: 'Post', icon: Camera, color: 'bg-blue-100 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
+                        { id: PostCategory.STORY, label: 'Story', icon: Smartphone, color: 'bg-pink-100 text-pink-700 border-pink-200', dot: 'bg-pink-500' }
+                      ].map(cat => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setCategory(cat.id)}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border-2 transition-all ${
+                            category === cat.id 
+                              ? `${cat.color} border-current` 
+                              : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                           <div className={`w-2 h-2 rounded-full ${cat.dot}`}></div>
+                           <span className="text-sm font-medium">{cat.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Data Publikacji</label>
+                    <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <input 
+                          type="datetime-local"
+                          value={scheduledDate}
+                          onChange={e => setScheduledDate(e.target.value)}
+                          className="w-full pl-10 p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                    </div>
+                  </div>
+                </>
              )}
 
              <div className="flex-1 flex flex-col">
@@ -169,7 +199,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({ isOpen, onClose, idea, currentUse
                <textarea 
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="w-full flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-h-[200px] text-sm leading-relaxed resize-none"
+                  className="w-full flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-h-[150px] text-sm leading-relaxed resize-none"
                   placeholder={isPost ? "Wpisz treść posta (caption)..." : "Opisz koncepcję..."}
                />
              </div>

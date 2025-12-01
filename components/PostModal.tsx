@@ -44,7 +44,8 @@ const PostModal: React.FC<PostModalProps> = ({ isOpen, onClose, post, currentUse
   if (!isOpen) return null;
 
   const handleSave = () => {
-    const timestamp = scheduledDate ? new Date(scheduledDate).getTime() : undefined;
+    // Fix: Firestore doesn't like undefined, use null
+    const timestamp = scheduledDate ? new Date(scheduledDate).getTime() : null;
     
     if (post) {
       dbService.updatePost(post.id, {
