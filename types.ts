@@ -55,7 +55,7 @@ export interface Post {
 
 export enum UserRole {
   ADMIN = 'ADMIN', // Creator
-  CLIENT = 'CLIENT' // Client
+  CLIENT = 'IQFM' // Client
 }
 
 export interface User {
@@ -74,7 +74,7 @@ export const MOCK_USER_ADMIN: User = {
 
 export const MOCK_USER_CLIENT: User = {
   id: 'client_1',
-  name: 'Klient',
+  name: 'Kasia',
   role: UserRole.CLIENT,
   avatarUrl: 'https://ui-avatars.com/api/?name=Klient&background=6366f1&color=fff'
 };
